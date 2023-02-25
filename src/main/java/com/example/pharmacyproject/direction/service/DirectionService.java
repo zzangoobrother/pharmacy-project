@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,8 +30,11 @@ public class DirectionService {
     // 반경 10KM 이내
     private static final double RADIUS_KM = 10.0;
 
+    private static final String DIRECTION_BASE_URL = "https://map.kakao.com/link/map/";
+
     private final PharmacySearchService pharmacySearchService;
     private final KakaoCategorySearchService kakaoCategorySearchService;
+    private final Base62Service base62Service;
     private final DirectionRepository directionRepository;
 
     @Transactional
@@ -40,6 +44,15 @@ public class DirectionService {
         }
 
         return directionRepository.saveAll(directions);
+    }
+
+    public String findDirectionUrlById(String encodedId) {
+        Long decodedId = base62Service.decodeDirectionId(encodedId);
+        Direction direction = directionRepository.findById(decodedId).orElse(null);
+
+        String params = String.join(",", direction.getTargetPharmacyName(), String.valueOf(direction.getTargetLatitude()), String.valueOf(direction.getTargetLongitude()));
+
+        return UriComponentsBuilder.fromHttpUrl(DIRECTION_BASE_URL + params).toUriString();
     }
 
     public List<Direction> buildDirectionList(DocumentDto documentDto) {
